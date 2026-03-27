@@ -1,0 +1,63 @@
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import style
+import os
+import datetime as dt
+
+style.use('ggplot')
+
+# Dates
+start = dt.datetime(2025, 9, 12)
+end = dt.datetime(2026, 2, 5)
+
+# Tickers
+tickers = ['AAPL', 'GOOGL']
+
+# Fetch data using yfinance with threads=False to avoid multitasking error
+prices = yf.download(tickers, start=start, end=end, threads=False)['Close']
+
+# Daily returns
+returns = prices.pct_change()
+
+# Monte Carlo parameters
+num_simulations = 2
+num_days = 174
+
+# Ensure Plots folder exists
+plot_folder = "Plots"
+if not os.path.exists(plot_folder):
+    os.makedirs(plot_folder)
+
+# Run simulations for each stock
+for ticker in tickers:
+    last_price = prices[ticker].iloc[-1]
+    daily_vol = returns[ticker].std()
+
+    simulation_df = pd.DataFrame()
+
+    for i in range(num_simulations):
+        price_series = [last_price]
+        for _ in range(num_days):
+            price = price_series[-1] * (1 + np.random.normal(0, daily_vol))
+            price_series.append(price)
+        simulation_df[i] = price_series
+
+    # Plot
+    plt.figure(figsize=(12,6))
+    plt.plot(simulation_df, color='blue', alpha=0.1)
+    plt.axhline(y=last_price, color='red', linestyle='--', label='Last Price')
+    plt.title(f'Monte Carlo Simulation of {ticker} Stock Prices')
+    plt.xlabel('Days')
+    plt.ylabel('Price ($)')
+    plt.legend()
+    plt.tight_layout()
+
+    # Save plot
+    plt.savefig(os.path.join(plot_folder, f'{ticker}_monte_carlo_simulation.png'))
+    plt.show()
+
+
+
+
